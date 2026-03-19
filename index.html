@@ -1,0 +1,1814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>My Ledger</title>
+  <meta name="description" content="Personal finance ledger — track friends & expenses" />
+  <meta name="theme-color" content="#0d0d14" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="My Ledger" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg:       #0d0d14;
+      --bg2:      #13131f;
+      --bg3:      #1a1a2a;
+      --border:   rgba(255,255,255,0.07);
+      --gold:     #e8b84b;
+      --gold2:    #f5d17a;
+      --red:      #e05c5c;
+      --green:    #5ce0a0;
+      --blue:     #5c9fe0;
+      --text:     #f0ede8;
+      --muted:    rgba(240,237,232,0.45);
+      --card-r:   16px;
+      --shadow:   0 8px 32px rgba(0,0,0,0.5);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      height: 100%; width: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      overflow: hidden;
+    }
+
+    /* ── SCREENS ───────────────────────────────── */
+    .screen {
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+      opacity: 0; pointer-events: none;
+      transform: translateY(12px);
+      transition: opacity .3s ease, transform .3s ease;
+    }
+    .screen.active {
+      opacity: 1; pointer-events: all;
+      transform: translateY(0);
+    }
+
+    /* ── LOGIN ─────────────────────────────────── */
+    #loginScreen {
+      background: var(--bg);
+      align-items: center; justify-content: center;
+      gap: 0;
+    }
+    .login-wrap {
+      width: 100%; max-width: 360px;
+      padding: 40px 24px;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 32px;
+    }
+    .login-logo {
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+    }
+    .logo-icon {
+      width: 72px; height: 72px;
+      background: linear-gradient(135deg, var(--gold), #c8932b);
+      border-radius: 20px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 34px;
+      box-shadow: 0 0 40px rgba(232,184,75,0.3);
+    }
+    .login-logo h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
+    .login-logo span { font-size: 13px; color: var(--muted); font-weight: 400; letter-spacing: 2px; text-transform: uppercase; }
+    .pin-display {
+      display: flex; gap: 12px;
+    }
+    .pin-dot {
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      background: transparent;
+      transition: background .15s, border-color .15s, transform .15s;
+    }
+    .pin-dot.filled {
+      background: var(--gold);
+      border-color: var(--gold);
+      transform: scale(1.15);
+    }
+    .pin-dot.shake { animation: shake .3s ease; }
+    @keyframes shake {
+      0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)}
+    }
+    .pin-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 12px; width: 100%;
+    }
+    .pin-btn {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      font-size: 22px; font-weight: 700;
+      padding: 18px 0;
+      cursor: pointer;
+      transition: background .15s, transform .1s;
+      user-select: none;
+    }
+    .pin-btn:active { background: var(--bg); transform: scale(.94); }
+    .pin-btn.del { font-size: 18px; color: var(--muted); }
+    .pin-btn.empty { visibility: hidden; }
+    .login-error {
+      font-size: 13px; color: var(--red);
+      min-height: 18px; text-align: center;
+    }
+    .setup-hint { font-size: 13px; color: var(--muted); text-align: center; line-height: 1.6; }
+
+    /* ── TOP BAR ───────────────────────────────── */
+    .topbar {
+      display: flex; align-items: center;
+      padding: 52px 20px 16px;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    .topbar-title { font-size: 22px; font-weight: 800; flex: 1; }
+    .topbar-btn {
+      width: 40px; height: 40px;
+      border-radius: 12px;
+      background: var(--bg3); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 18px;
+      transition: background .15s;
+    }
+    .topbar-btn:active { background: var(--bg); }
+
+    /* ── BOTTOM NAV ────────────────────────────── */
+    .bottom-nav {
+      display: flex;
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+      padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+      flex-shrink: 0;
+    }
+    .nav-item {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; gap: 4px;
+      cursor: pointer; padding: 6px 0;
+      font-size: 10px; font-weight: 600; letter-spacing: .5px;
+      color: var(--muted);
+      transition: color .2s;
+      text-transform: uppercase;
+      user-select: none;
+    }
+    .nav-item .nav-icon { font-size: 22px; transition: transform .2s; }
+    .nav-item.active { color: var(--gold); }
+    .nav-item.active .nav-icon { transform: translateY(-2px); }
+
+    /* ── SCROLLABLE BODY ───────────────────────── */
+    .screen-body {
+      flex: 1; overflow-y: auto;
+      padding: 0 16px 20px;
+      overscroll-behavior: contain;
+    }
+    .screen-body::-webkit-scrollbar { display: none; }
+
+    /* ── CARDS ─────────────────────────────────── */
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--card-r);
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    /* ── DASHBOARD ─────────────────────────────── */
+    .dash-hero {
+      background: linear-gradient(135deg, #1c1c30 0%, #13131f 100%);
+      border: 1px solid rgba(232,184,75,0.2);
+      border-radius: var(--card-r);
+      padding: 24px;
+      margin-bottom: 16px;
+      position: relative; overflow: hidden;
+    }
+    .dash-hero::before {
+      content: '';
+      position: absolute; top: -30px; right: -30px;
+      width: 120px; height: 120px;
+      background: radial-gradient(circle, rgba(232,184,75,0.15) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    .dash-hero .label { font-size: 11px; font-weight: 600; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; }
+    .dash-hero .amount {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 38px; font-weight: 700;
+      color: var(--gold);
+      line-height: 1;
+    }
+    .dash-hero .sub { font-size: 13px; color: var(--muted); margin-top: 6px; }
+    .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+    .dash-mini {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px;
+    }
+    .dash-mini .label { font-size: 10px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; }
+    .dash-mini .val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 22px; font-weight: 700;
+    }
+    .dash-mini .val.red { color: var(--red); }
+    .dash-mini .val.green { color: var(--green); }
+    .dash-mini .val.blue { color: var(--blue); }
+
+    .section-label {
+      font-size: 11px; font-weight: 600; letter-spacing: 2px;
+      color: var(--muted); text-transform: uppercase;
+      margin: 20px 0 10px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .section-label a {
+      font-size: 11px; color: var(--gold); cursor: pointer;
+      text-decoration: none; letter-spacing: 0;
+      font-weight: 600;
+    }
+
+    /* ── FRIEND ITEMS ──────────────────────────── */
+    .friend-item {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: opacity .15s;
+    }
+    .friend-item:last-child { border-bottom: none; }
+    .friend-item:active { opacity: .7; }
+    .avatar {
+      width: 42px; height: 42px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 800;
+      flex-shrink: 0;
+    }
+    .friend-info { flex: 1; min-width: 0; }
+    .friend-name { font-size: 15px; font-weight: 700; }
+    .friend-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .friend-bal {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 15px; font-weight: 700;
+      flex-shrink: 0;
+    }
+    .friend-bal.owed { color: var(--green); }
+    .friend-bal.cleared { color: var(--muted); }
+    .friend-bal.owes { color: var(--red); }
+
+    /* ── EXPENSE ITEMS ─────────────────────────── */
+    .exp-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .exp-item:last-child { border-bottom: none; }
+    .exp-cat-icon {
+      width: 38px; height: 38px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px; flex-shrink: 0;
+    }
+    .exp-info { flex: 1; min-width: 0; }
+    .exp-name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .exp-date { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .exp-amount {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px; font-weight: 700;
+      color: var(--red);
+      flex-shrink: 0;
+    }
+
+    /* ── FAB ───────────────────────────────────── */
+    .fab {
+      position: fixed; bottom: calc(72px + env(safe-area-inset-bottom));
+      right: 20px;
+      width: 56px; height: 56px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, var(--gold), #c8932b);
+      border: none; color: #000; font-size: 26px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 24px rgba(232,184,75,0.4);
+      transition: transform .2s, box-shadow .2s;
+      z-index: 50;
+    }
+    .fab:active { transform: scale(.9); box-shadow: 0 2px 12px rgba(232,184,75,0.3); }
+    .fab.hidden { display: none; }
+
+    /* ── MODALS ────────────────────────────────── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
+      display: flex; align-items: flex-end;
+      z-index: 100;
+      opacity: 0; pointer-events: none;
+      transition: opacity .25s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--bg2);
+      border-radius: 24px 24px 0 0;
+      width: 100%; padding: 20px 20px max(20px, env(safe-area-inset-bottom));
+      border-top: 1px solid var(--border);
+      transform: translateY(100%);
+      transition: transform .3s cubic-bezier(.32,1.14,.63,.99);
+      max-height: 90vh; overflow-y: auto;
+    }
+    .modal-overlay.open .modal { transform: translateY(0); }
+    .modal-handle {
+      width: 36px; height: 4px;
+      background: var(--border); border-radius: 2px;
+      margin: 0 auto 20px;
+    }
+    .modal-title { font-size: 20px; font-weight: 800; margin-bottom: 20px; }
+
+    /* ── FORM ──────────────────────────────────── */
+    .field { margin-bottom: 14px; }
+    .field label { font-size: 11px; letter-spacing: 1.5px; font-weight: 600; color: var(--muted); text-transform: uppercase; display: block; margin-bottom: 6px; }
+    .field input, .field select, .field textarea {
+      width: 100%;
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 12px; color: var(--text);
+      font-family: 'Syne', sans-serif; font-size: 15px;
+      padding: 12px 14px; outline: none;
+      transition: border-color .2s;
+      appearance: none;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus {
+      border-color: var(--gold);
+    }
+    .field textarea { resize: none; height: 80px; }
+    .field select option { background: var(--bg3); }
+
+    .row { display: flex; gap: 10px; }
+    .row .field { flex: 1; }
+
+    .btn {
+      width: 100%; padding: 15px;
+      border-radius: 14px; border: none;
+      font-family: 'Syne', sans-serif;
+      font-size: 15px; font-weight: 700;
+      cursor: pointer; transition: opacity .2s, transform .15s;
+    }
+    .btn:active { transform: scale(.97); opacity: .85; }
+    .btn-gold { background: linear-gradient(135deg, var(--gold), #c8932b); color: #000; }
+    .btn-red { background: rgba(224,92,92,0.15); color: var(--red); border: 1px solid rgba(224,92,92,0.3); }
+    .btn-ghost { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
+
+    .seg-control {
+      display: flex; background: var(--bg3);
+      border-radius: 12px; padding: 4px; margin-bottom: 14px;
+    }
+    .seg-btn {
+      flex: 1; padding: 9px;
+      border-radius: 9px; border: none;
+      font-family: 'Syne', sans-serif;
+      font-size: 13px; font-weight: 700;
+      cursor: pointer; color: var(--muted);
+      background: transparent;
+      transition: background .2s, color .2s;
+    }
+    .seg-btn.active { background: var(--bg2); color: var(--text); }
+
+    /* ── FRIEND DETAIL HERO ────────────────────── */
+    .fd-hero {
+      display: flex; flex-direction: column;
+      align-items: center; padding: 20px 0 22px;
+      gap: 4px; position: relative;
+    }
+    .fd-avatar-wrap {
+      position: relative; margin-bottom: 10px;
+    }
+    .fd-avatar {
+      width: 76px; height: 76px; border-radius: 22px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 30px; font-weight: 800; position: relative; z-index: 1;
+      transition: transform .2s;
+    }
+    .fd-glow-ring {
+      position: absolute; inset: -4px;
+      border-radius: 26px; opacity: 0.25;
+      filter: blur(12px); z-index: 0;
+    }
+    .fd-name { font-size: 24px; font-weight: 800; text-align: center; }
+
+    /* ── TRANSACTION SUMMARY ───────────────────── */
+    .fd-summary {
+      display: grid; grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px; margin-bottom: 16px;
+    }
+    .fd-stat {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 14px; padding: 14px 10px;
+      text-align: center;
+    }
+    .fd-stat-icon { font-size: 20px; margin-bottom: 6px; }
+    .fd-stat-label {
+      font-size: 9px; letter-spacing: 1px; font-weight: 600;
+      color: var(--muted); text-transform: uppercase; margin-bottom: 5px;
+      line-height: 1.3;
+    }
+    .fd-stat-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px; font-weight: 700; line-height: 1;
+    }
+
+
+      display: flex; flex-direction: column;
+      align-items: center; padding: 24px 0 20px;
+      gap: 10px;
+    }
+    .friend-header .avatar-lg {
+      width: 64px; height: 64px; border-radius: 18px;
+      font-size: 28px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .friend-header .name { font-size: 22px; font-weight: 800; }
+    .friend-header .balance-tag {
+      padding: 6px 16px; border-radius: 20px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 15px; font-weight: 700;
+    }
+    .tx-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 0; border-bottom: 1px solid var(--border);
+    }
+    .tx-item:last-child { border-bottom: none; }
+    .tx-icon { font-size: 20px; }
+    .tx-info { flex: 1; min-width: 0; }
+    .tx-note { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tx-date { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .tx-amount {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px; font-weight: 700;
+      flex-shrink: 0;
+    }
+    .tx-del { font-size: 16px; color: var(--muted); cursor: pointer; padding: 4px; flex-shrink: 0; }
+    .tx-del:active { color: var(--red); }
+
+    /* ── EXPENSE SCREEN ────────────────────────── */
+    .month-nav {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      padding: 0 0 16px;
+    }
+    .month-nav .mn-btn {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: var(--bg3); border: 1px solid var(--border);
+      color: var(--text); font-size: 18px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+    }
+    .month-nav .mn-label { font-size: 17px; font-weight: 800; }
+
+    .cat-chips {
+      display: flex; gap: 8px; overflow-x: auto;
+      padding-bottom: 12px; margin-bottom: 4px;
+    }
+    .cat-chips::-webkit-scrollbar { display: none; }
+    .cat-chip {
+      padding: 6px 14px; border-radius: 20px;
+      background: var(--bg3); border: 1px solid var(--border);
+      font-size: 12px; font-weight: 700; color: var(--muted);
+      white-space: nowrap; cursor: pointer;
+      transition: background .15s, color .15s, border-color .15s;
+      flex-shrink: 0;
+    }
+    .cat-chip.active {
+      background: rgba(232,184,75,0.15);
+      border-color: var(--gold); color: var(--gold);
+    }
+    .exp-summary {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 10px; margin-bottom: 16px;
+    }
+    .exp-summary-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px;
+    }
+    .exp-summary-card .lbl { font-size: 10px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
+    .exp-summary-card .val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 20px; font-weight: 700;
+    }
+
+    /* ── SETTINGS ──────────────────────────────── */
+    .settings-section { margin-bottom: 24px; }
+    .settings-section .sec-title { font-size: 11px; letter-spacing: 2px; font-weight: 600; color: var(--muted); text-transform: uppercase; margin-bottom: 10px; }
+    .setting-row {
+      display: flex; align-items: center;
+      padding: 14px 16px; gap: 14px;
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 12px; margin-bottom: 8px;
+      cursor: pointer; transition: background .15s;
+    }
+    .setting-row:active { background: var(--bg3); }
+    .setting-row .sr-icon { font-size: 20px; }
+    .setting-row .sr-text { flex: 1; }
+    .setting-row .sr-title { font-size: 15px; font-weight: 700; }
+    .setting-row .sr-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .setting-row .sr-arr { color: var(--muted); font-size: 16px; }
+
+    /* ── EMPTY STATE ───────────────────────────── */
+    .empty-state {
+      text-align: center; padding: 40px 20px;
+      color: var(--muted); font-size: 14px; line-height: 1.7;
+    }
+    .empty-state .empty-icon { font-size: 40px; margin-bottom: 12px; }
+    .empty-state strong { display: block; color: var(--text); font-size: 16px; margin-bottom: 6px; }
+
+    /* ── TOAST ─────────────────────────────────── */
+    #toast {
+      position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 12px; padding: 12px 20px;
+      font-size: 14px; font-weight: 600;
+      z-index: 200; opacity: 0;
+      transition: opacity .25s, transform .25s;
+      white-space: nowrap; pointer-events: none;
+      box-shadow: var(--shadow);
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ── MISC ──────────────────────────────────── */
+    .divider { height: 1px; background: var(--border); margin: 4px 0; }
+    .tag {
+      display: inline-block; padding: 3px 10px;
+      border-radius: 6px; font-size: 11px; font-weight: 700;
+      letter-spacing: .5px;
+    }
+    .tag-green { background: rgba(92,224,160,0.12); color: var(--green); }
+    .tag-red { background: rgba(224,92,92,0.12); color: var(--red); }
+    .tag-blue { background: rgba(92,159,224,0.12); color: var(--blue); }
+
+    /* ── CONFIRM ───────────────────────────────── */
+    .confirm-modal {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.8); backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 200; opacity: 0; pointer-events: none;
+      transition: opacity .2s;
+      padding: 20px;
+    }
+    .confirm-modal.open { opacity: 1; pointer-events: all; }
+    .confirm-box {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 20px; padding: 24px;
+      width: 100%; max-width: 320px; text-align: center;
+    }
+    .confirm-box .ci { font-size: 36px; margin-bottom: 12px; }
+    .confirm-box h3 { font-size: 18px; font-weight: 800; margin-bottom: 8px; }
+    .confirm-box p { font-size: 13px; color: var(--muted); margin-bottom: 20px; line-height: 1.6; }
+    .confirm-btns { display: flex; gap: 10px; }
+    .confirm-btns .btn { flex: 1; }
+
+    /* ── INSTALL BANNER ────────────────────────── */
+    #installBanner {
+      position: fixed; bottom: calc(72px + env(safe-area-inset-bottom) + 8px);
+      left: 12px; right: 12px;
+      background: linear-gradient(135deg, #0e2a38 0%, #0d1e2e 100%);
+      border: 1px solid rgba(0,198,255,0.25);
+      border-radius: 18px;
+      padding: 14px 16px;
+      display: flex; align-items: center; gap: 12px;
+      z-index: 80;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,198,255,0.1);
+      transform: translateY(120%);
+      opacity: 0;
+      transition: transform .4s cubic-bezier(.32,1.14,.63,.99), opacity .3s ease;
+      pointer-events: none;
+    }
+    #installBanner.visible {
+      transform: translateY(0);
+      opacity: 1;
+      pointer-events: all;
+    }
+    .install-icon {
+      width: 44px; height: 44px; border-radius: 12px;
+      overflow: hidden; flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+    .install-icon img { width: 100%; height: 100%; object-fit: cover; }
+    .install-text { flex: 1; min-width: 0; }
+    .install-text strong { display: block; font-size: 14px; font-weight: 800; color: var(--text); }
+    .install-text span { font-size: 11px; color: rgba(0,198,255,0.8); font-weight: 500; }
+    .install-btn-cta {
+      background: linear-gradient(135deg, #00c6ff, #0072ff);
+      color: #fff; border: none;
+      padding: 9px 16px; border-radius: 10px;
+      font-family: 'Syne', sans-serif;
+      font-size: 13px; font-weight: 700;
+      cursor: pointer; flex-shrink: 0;
+      transition: opacity .2s, transform .15s;
+      white-space: nowrap;
+    }
+    .install-btn-cta:active { opacity: .8; transform: scale(.95); }
+    .install-dismiss {
+      width: 28px; height: 28px; border-radius: 8px;
+      background: rgba(255,255,255,0.07); border: none;
+      color: var(--muted); font-size: 14px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; flex-shrink: 0;
+      transition: background .15s;
+    }
+    .install-dismiss:active { background: rgba(255,255,255,0.12); }
+
+    /* ── INSTALL SETTING ROW SPECIAL ───────────── */
+    .setting-row-install {
+      background: linear-gradient(135deg, rgba(0,114,255,0.12), rgba(0,198,255,0.08));
+      border-color: rgba(0,198,255,0.2) !important;
+    }
+    .setting-row-install .sr-title { color: #00c6ff; }
+    .setting-row-install .sr-arr { color: #00c6ff; }
+
+
+  </style>
+</head>
+<body>
+
+<!-- ─── LOGIN ──────────────────────────────────── -->
+<div class="screen active" id="loginScreen">
+  <div class="login-wrap">
+    <div class="login-logo">
+      <div class="logo-icon">💰</div>
+      <h1>My Ledger</h1>
+      <span>Personal Finance</span>
+    </div>
+
+    <div id="pinDisplay" class="pin-display">
+      <div class="pin-dot" id="d0"></div>
+      <div class="pin-dot" id="d1"></div>
+      <div class="pin-dot" id="d2"></div>
+      <div class="pin-dot" id="d3"></div>
+    </div>
+
+    <p id="loginHint" class="setup-hint" style="display:none"></p>
+    <p id="loginError" class="login-error"></p>
+
+    <div class="pin-grid">
+      <button class="pin-btn" onclick="pinPress('1')">1</button>
+      <button class="pin-btn" onclick="pinPress('2')">2</button>
+      <button class="pin-btn" onclick="pinPress('3')">3</button>
+      <button class="pin-btn" onclick="pinPress('4')">4</button>
+      <button class="pin-btn" onclick="pinPress('5')">5</button>
+      <button class="pin-btn" onclick="pinPress('6')">6</button>
+      <button class="pin-btn" onclick="pinPress('7')">7</button>
+      <button class="pin-btn" onclick="pinPress('8')">8</button>
+      <button class="pin-btn" onclick="pinPress('9')">9</button>
+      <button class="pin-btn empty"></button>
+      <button class="pin-btn" onclick="pinPress('0')">0</button>
+      <button class="pin-btn del" onclick="pinDel()">⌫</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── MAIN (nav + pages) ─────────────────────── -->
+<div class="screen" id="mainScreen" style="background:var(--bg)">
+
+  <!-- DASHBOARD PAGE -->
+  <div id="pageDash" style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+    <div class="topbar">
+      <div class="topbar-title">Dashboard</div>
+      <div class="topbar-btn" onclick="showLogoutConfirm()">🔒</div>
+    </div>
+    <div class="screen-body" id="dashBody"></div>
+  </div>
+
+  <!-- FRIENDS PAGE -->
+  <div id="pageFriends" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+    <div class="topbar">
+      <div class="topbar-title">Friends</div>
+    </div>
+    <div class="screen-body" id="friendsBody"></div>
+  </div>
+
+  <!-- EXPENSES PAGE -->
+  <div id="pageExpenses" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+    <div class="topbar">
+      <div class="topbar-title">Expenses</div>
+    </div>
+    <div class="screen-body" id="expensesBody"></div>
+  </div>
+
+  <!-- SETTINGS PAGE -->
+  <div id="pageSettings" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+    <div class="topbar">
+      <div class="topbar-title">Settings</div>
+    </div>
+    <div class="screen-body" id="settingsBody"></div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <div class="nav-item active" id="nav-dash" onclick="switchPage('dash')">
+      <div class="nav-icon">📊</div>
+      <span>Dashboard</span>
+    </div>
+    <div class="nav-item" id="nav-friends" onclick="switchPage('friends')">
+      <div class="nav-icon">👥</div>
+      <span>Friends</span>
+    </div>
+    <div class="nav-item" id="nav-expenses" onclick="switchPage('expenses')">
+      <div class="nav-icon">💸</div>
+      <span>Expenses</span>
+    </div>
+    <div class="nav-item" id="nav-settings" onclick="switchPage('settings')">
+      <div class="nav-icon">⚙️</div>
+      <span>Settings</span>
+    </div>
+  </div>
+</div>
+
+<!-- FRIEND DETAIL SCREEN -->
+<div class="screen" id="friendDetailScreen" style="background:var(--bg)">
+  <div class="topbar">
+    <div class="topbar-btn" onclick="backToFriends()">←</div>
+    <div class="topbar-title" id="detailFriendName"></div>
+    <div class="topbar-btn" id="detailEditBtn" onclick="editCurrentFriend()">✏️</div>
+  </div>
+  <div class="screen-body" id="friendDetailBody"></div>
+</div>
+
+<!-- FAB -->
+<button class="fab hidden" id="fab" onclick="fabAction()">+</button>
+
+<!-- ─── MODALS ──────────────────────────────────── -->
+
+<!-- Add Friend Modal -->
+<div class="modal-overlay" id="addFriendModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="addFriendTitle">Add Friend</div>
+    <div class="field"><label>Name</label><input id="fName" type="text" placeholder="Friend's name" autocomplete="off" /></div>
+    <div class="field"><label>Phone / Note (optional)</label><input id="fNote" type="text" placeholder="Contact info or note" autocomplete="off" /></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('addFriendModal')">Cancel</button>
+      <button class="btn btn-gold" style="flex:1" onclick="saveFriend()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Transaction Modal -->
+<div class="modal-overlay" id="addTxModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Add Transaction</div>
+    <div class="seg-control">
+      <button class="seg-btn active" id="tx-seg-lent" onclick="setTxType('lent')">💸 I Lent</button>
+      <button class="seg-btn" id="tx-seg-received" onclick="setTxType('received')">✅ Received Back</button>
+    </div>
+    <div class="field"><label>Amount (₹)</label><input id="txAmount" type="number" inputmode="decimal" placeholder="0.00" min="0" /></div>
+    <div class="field"><label>Note</label><input id="txNote" type="text" placeholder="What for?" autocomplete="off" /></div>
+    <div class="field"><label>Date</label><input id="txDate" type="date" /></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('addTxModal')">Cancel</button>
+      <button class="btn btn-gold" style="flex:1" onclick="saveTransaction()">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Expense Modal -->
+<div class="modal-overlay" id="addExpModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Add Expense</div>
+    <div class="field"><label>Amount (₹)</label><input id="expAmount" type="number" inputmode="decimal" placeholder="0.00" min="0" /></div>
+    <div class="field"><label>Note</label><input id="expNote" type="text" placeholder="What did you spend on?" autocomplete="off" /></div>
+    <div class="field">
+      <label>Category</label>
+      <select id="expCat">
+        <option>🍔 Food & Dining</option>
+        <option>🚗 Transport</option>
+        <option>🛒 Shopping</option>
+        <option>🏥 Health</option>
+        <option>🎬 Entertainment</option>
+        <option>🏠 Housing</option>
+        <option>📱 Utilities</option>
+        <option>✈️ Travel</option>
+        <option>📚 Education</option>
+        <option>💼 Business</option>
+        <option>🎁 Gifts</option>
+        <option>💰 Other</option>
+      </select>
+    </div>
+    <div class="field"><label>Date</label><input id="expDate" type="date" /></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('addExpModal')">Cancel</button>
+      <button class="btn btn-gold" style="flex:1" onclick="saveExpense()">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- Change PIN Modal -->
+<div class="modal-overlay" id="changePinModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Change PIN</div>
+    <div class="field"><label>Current PIN</label><input id="cpOld" type="password" inputmode="numeric" maxlength="4" placeholder="Current 4-digit PIN" /></div>
+    <div class="field"><label>New PIN</label><input id="cpNew" type="password" inputmode="numeric" maxlength="4" placeholder="New 4-digit PIN" /></div>
+    <div class="field"><label>Confirm New PIN</label><input id="cpConf" type="password" inputmode="numeric" maxlength="4" placeholder="Confirm new PIN" /></div>
+    <p id="pinChangeErr" style="font-size:13px;color:var(--red);min-height:18px;margin-bottom:12px"></p>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal('changePinModal')">Cancel</button>
+      <button class="btn btn-gold" style="flex:1" onclick="changePin()">Change</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Dialog -->
+<div class="confirm-modal" id="confirmModal">
+  <div class="confirm-box">
+    <div class="ci" id="confirmIcon">⚠️</div>
+    <h3 id="confirmTitle"></h3>
+    <p id="confirmMsg"></p>
+    <div class="confirm-btns">
+      <button class="btn btn-ghost" onclick="closeConfirm()">Cancel</button>
+      <button class="btn btn-red" id="confirmOk" onclick="doConfirm()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Install Banner -->
+<div id="installBanner">
+  <div class="install-icon">
+    <img src="icon-192.png" alt="My Ledger" onerror="this.parentElement.innerHTML='💰'" />
+  </div>
+  <div class="install-text">
+    <strong>My Ledger</strong>
+    <span>Install for offline access</span>
+  </div>
+  <button class="install-btn-cta" onclick="triggerInstall()">Install</button>
+  <button class="install-dismiss" onclick="dismissInstallBanner()" title="Dismiss">✕</button>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+/* ════════════════════════════════════════════════
+   DATA LAYER
+════════════════════════════════════════════════ */
+const DB = {
+  get friends() { try { return JSON.parse(localStorage.getItem('ldgr_friends')||'[]'); } catch{return[];} },
+  set friends(v) { localStorage.setItem('ldgr_friends', JSON.stringify(v)); },
+  get expenses() { try { return JSON.parse(localStorage.getItem('ldgr_expenses')||'[]'); } catch{return[];} },
+  set expenses(v) { localStorage.setItem('ldgr_expenses', JSON.stringify(v)); },
+  get pin() { return localStorage.getItem('ldgr_pin')||''; },
+  set pin(v) { localStorage.setItem('ldgr_pin', v); },
+};
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function today() { return new Date().toISOString().slice(0,10); }
+function fmtDate(d) {
+  if(!d) return '';
+  const dt = new Date(d+'T00:00:00');
+  return dt.toLocaleDateString('en-IN', {day:'numeric',month:'short',year:'numeric'});
+}
+function fmtAmt(n, sign=true) {
+  return (sign?'₹':'')+Math.abs(n).toLocaleString('en-IN', {minimumFractionDigits:0,maximumFractionDigits:2});
+}
+
+/* ════════════════════════════════════════════════
+   PIN / LOGIN
+════════════════════════════════════════════════ */
+let pinInput = '';
+let pinSetupStep = 0;
+let pinSetupFirst = '';
+
+function initLogin() {
+  if (!DB.pin) {
+    pinSetupStep = 1;
+    document.getElementById('loginHint').style.display = 'block';
+    document.getElementById('loginHint').textContent = 'First time? Set a 4-digit PIN to secure your ledger.';
+  }
+}
+
+function pinPress(d) {
+  if (pinInput.length >= 4) return;
+  pinInput += d;
+  updatePinDots();
+  if (pinInput.length === 4) {
+    setTimeout(() => {
+      if (!DB.pin) {
+        handlePinSetup();
+      } else {
+        handlePinLogin();
+      }
+    }, 100);
+  }
+}
+
+function pinDel() {
+  if (pinInput.length > 0) { pinInput = pinInput.slice(0,-1); updatePinDots(); }
+}
+
+function updatePinDots() {
+  for (let i=0;i<4;i++) {
+    document.getElementById('d'+i).classList.toggle('filled', i < pinInput.length);
+  }
+}
+
+function handlePinSetup() {
+  if (pinSetupStep === 1) {
+    pinSetupFirst = pinInput;
+    pinInput = '';
+    updatePinDots();
+    pinSetupStep = 2;
+    document.getElementById('loginHint').textContent = 'Re-enter PIN to confirm.';
+  } else {
+    if (pinInput === pinSetupFirst) {
+      DB.pin = pinInput;
+      pinInput = '';
+      document.getElementById('loginHint').style.display='none';
+      login();
+    } else {
+      showLoginError('PINs do not match. Try again.');
+      pinInput = ''; pinSetupFirst = ''; pinSetupStep = 1;
+      updatePinDots();
+      document.getElementById('loginHint').textContent = 'Set a 4-digit PIN.';
+    }
+  }
+}
+
+function handlePinLogin() {
+  if (pinInput === DB.pin) {
+    login();
+  } else {
+    showLoginError('Incorrect PIN');
+    pinInput = ''; updatePinDots();
+    const dots = document.querySelectorAll('.pin-dot');
+    dots.forEach(d => d.classList.add('shake'));
+    setTimeout(() => dots.forEach(d => d.classList.remove('shake')), 350);
+  }
+}
+
+function showLoginError(msg) {
+  const el = document.getElementById('loginError');
+  el.textContent = msg;
+  setTimeout(() => el.textContent='', 2000);
+}
+
+function login() {
+  showScreen('mainScreen');
+  switchPage('dash');
+}
+
+function showLogoutConfirm() {
+  showConfirm('🔒', 'Lock App', 'This will log you out and return to the PIN screen.', () => {
+    showScreen('loginScreen');
+    pinInput = '';
+    updatePinDots();
+    document.getElementById('loginError').textContent = '';
+  });
+}
+
+/* ════════════════════════════════════════════════
+   SCREENS & NAVIGATION
+════════════════════════════════════════════════ */
+let currentPage = 'dash';
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  updateFab();
+}
+
+function switchPage(page) {
+  currentPage = page;
+  const pages = ['dash','friends','expenses','settings'];
+  pages.forEach(p => {
+    document.getElementById('page'+cap(p)).style.display = p===page ? 'flex' : 'none';
+    document.getElementById('nav-'+p).classList.toggle('active', p===page);
+  });
+  updateFab();
+  renderPage(page);
+}
+
+function cap(s) { return s.charAt(0).toUpperCase()+s.slice(1); }
+
+function updateFab() {
+  const fab = document.getElementById('fab');
+  const screens = document.querySelector('.screen.active').id;
+  if (screens !== 'mainScreen') { fab.classList.add('hidden'); return; }
+  const showFab = ['friends','expenses'].includes(currentPage);
+  fab.classList.toggle('hidden', !showFab);
+}
+
+function fabAction() {
+  if (currentPage === 'friends') openAddFriend();
+  else if (currentPage === 'expenses') openAddExpense();
+}
+
+function renderPage(page) {
+  if (page === 'dash') renderDash();
+  else if (page === 'friends') renderFriends();
+  else if (page === 'expenses') renderExpenses();
+  else if (page === 'settings') renderSettings();
+}
+
+/* ════════════════════════════════════════════════
+   DASHBOARD
+════════════════════════════════════════════════ */
+function renderDash() {
+  const friends = DB.friends;
+  const expenses = DB.expenses;
+
+  // Total lent outstanding
+  let totalLent = 0, totalOwed = 0;
+  friends.forEach(f => {
+    const bal = friendBalance(f);
+    if (bal > 0) totalLent += bal;
+    if (bal < 0) totalOwed += Math.abs(bal);
+  });
+
+  // This month expenses
+  const now = new Date();
+  const ym = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  const monthExp = expenses.filter(e => e.date.startsWith(ym));
+  const monthTotal = monthExp.reduce((s,e)=>s+e.amount,0);
+
+  // Active friends
+  const activeFriends = friends.filter(f => friendBalance(f) !== 0);
+
+  const body = document.getElementById('dashBody');
+  body.innerHTML = `
+    <div class="dash-hero">
+      <div class="label">Total Outstanding</div>
+      <div class="amount">${fmtAmt(totalLent)}</div>
+      <div class="sub">across ${activeFriends.filter(f=>friendBalance(f)>0).length} friend${activeFriends.filter(f=>friendBalance(f)>0).length!==1?'s':''}</div>
+    </div>
+
+    <div class="dash-grid">
+      <div class="dash-mini">
+        <div class="label">This Month</div>
+        <div class="val red">${fmtAmt(monthTotal)}</div>
+      </div>
+      <div class="dash-mini">
+        <div class="label">They Owe You</div>
+        <div class="val green">${fmtAmt(totalLent)}</div>
+      </div>
+      <div class="dash-mini">
+        <div class="label">You Owe Them</div>
+        <div class="val red">${fmtAmt(totalOwed)}</div>
+      </div>
+      <div class="dash-mini">
+        <div class="label">Friends</div>
+        <div class="val blue">${friends.length}</div>
+      </div>
+    </div>
+
+    <div class="section-label">
+      <span>Outstanding Friends</span>
+      <a onclick="switchPage('friends')">See All →</a>
+    </div>
+    <div class="card">
+      ${activeFriends.length === 0 ? `<div class="empty-state"><div class="empty-icon">🤝</div><strong>All settled up!</strong>No outstanding balances.</div>` :
+        activeFriends.map(f => renderFriendItem(f)).join('')
+      }
+    </div>
+
+    <div class="section-label">
+      <span>Recent Expenses</span>
+      <a onclick="switchPage('expenses')">See All →</a>
+    </div>
+    <div class="card">
+      ${expenses.length === 0 ? `<div class="empty-state"><div class="empty-icon">💸</div><strong>No expenses yet</strong>Start tracking your spending.</div>` :
+        expenses.slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5).map(renderExpItem).join('')
+      }
+    </div>
+  `;
+}
+
+/* ════════════════════════════════════════════════
+   FRIENDS
+════════════════════════════════════════════════ */
+function friendBalance(f) {
+  return (f.transactions||[]).reduce((s,t) => s + (t.type==='lent' ? t.amount : -t.amount), 0);
+}
+
+/* 12 rich gradients — each friend gets a unique one based on their name */
+const FRIEND_GRADIENTS = [
+  { grad: 'linear-gradient(135deg,#f7971e,#ffd200)',   glow: 'rgba(255,210,0,0.35)',    text: '#1a1000' }, // Amber–Yellow
+  { grad: 'linear-gradient(135deg,#11998e,#38ef7d)',   glow: 'rgba(56,239,125,0.3)',    text: '#002a15' }, // Teal–Mint
+  { grad: 'linear-gradient(135deg,#4776e6,#8e54e9)',   glow: 'rgba(142,84,233,0.35)',   text: '#0a0020' }, // Blue–Violet
+  { grad: 'linear-gradient(135deg,#f953c6,#b91d73)',   glow: 'rgba(249,83,198,0.35)',   text: '#2a0020' }, // Pink–Magenta
+  { grad: 'linear-gradient(135deg,#f05053,#e1eec3)',   glow: 'rgba(240,80,83,0.3)',     text: '#2a0000' }, // Red–Cream
+  { grad: 'linear-gradient(135deg,#43cea2,#185a9d)',   glow: 'rgba(67,206,162,0.3)',    text: '#001525' }, // Emerald–Navy
+  { grad: 'linear-gradient(135deg,#fc5c7d,#6a3093)',   glow: 'rgba(252,92,125,0.35)',   text: '#1a0025' }, // Rose–Purple
+  { grad: 'linear-gradient(135deg,#f7b733,#fc4a1a)',   glow: 'rgba(247,183,51,0.35)',   text: '#200800' }, // Saffron–Orange
+  { grad: 'linear-gradient(135deg,#00c6ff,#0072ff)',   glow: 'rgba(0,198,255,0.3)',     text: '#000a20' }, // Sky–Cobalt
+  { grad: 'linear-gradient(135deg,#a8ff78,#78ffd6)',   glow: 'rgba(168,255,120,0.3)',   text: '#001a10' }, // Lime–Aqua
+  { grad: 'linear-gradient(135deg,#f77062,#fe5196)',   glow: 'rgba(254,81,150,0.35)',   text: '#200010' }, // Coral–Hot Pink
+  { grad: 'linear-gradient(135deg,#c94b4b,#4b134f)',   glow: 'rgba(201,75,75,0.35)',    text: '#1a0000' }, // Crimson–Plum
+];
+
+function avatarGradient(name) {
+  let h = 0;
+  for (let c of name) h = (h * 31 + c.charCodeAt(0)) % FRIEND_GRADIENTS.length;
+  return FRIEND_GRADIENTS[h];
+}
+
+// Keep old name as alias for backwards compat
+function avatarColor(name) {
+  const g = avatarGradient(name);
+  return [g.grad, g.text];
+}
+
+function renderFriendItem(f, clickable=true) {
+  const bal = friendBalance(f);
+  const ag = avatarGradient(f.name);
+  const initials = f.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  const balClass = bal > 0 ? 'owed' : bal < 0 ? 'owes' : 'cleared';
+  const balText = bal === 0 ? 'Settled' : (bal > 0 ? '+'+fmtAmt(bal) : '-'+fmtAmt(Math.abs(bal)));
+  const txCount = (f.transactions||[]).length;
+  return `<div class="friend-item" ${clickable?`onclick="openFriendDetail('${f.id}')"`:''}">
+    <div class="avatar" style="background:${ag.grad};color:${ag.text};box-shadow:0 4px 14px ${ag.glow}">${initials}</div>
+    <div class="friend-info">
+      <div class="friend-name">${esc(f.name)}</div>
+      <div class="friend-sub">${txCount} transaction${txCount!==1?'s':''}</div>
+    </div>
+    <div class="friend-bal ${balClass}">${balText}</div>
+  </div>`;
+}
+
+function renderFriends() {
+  const friends = DB.friends;
+  const body = document.getElementById('friendsBody');
+  if (friends.length === 0) {
+    body.innerHTML = `<div class="empty-state" style="padding-top:80px"><div class="empty-icon">👥</div><strong>No friends added</strong>Tap + to add a friend and start tracking.</div>`;
+    return;
+  }
+
+  // Sort: outstanding first
+  const sorted = [...friends].sort((a,b) => Math.abs(friendBalance(b)) - Math.abs(friendBalance(a)));
+  const owed = sorted.filter(f=>friendBalance(f)>0);
+  const owes = sorted.filter(f=>friendBalance(f)<0);
+  const settled = sorted.filter(f=>friendBalance(f)===0);
+
+  let html = '';
+  if (owed.length) {
+    html += `<div class="section-label"><span>They Owe You</span></div><div class="card">${owed.map(f=>renderFriendItem(f)).join('')}</div>`;
+  }
+  if (owes.length) {
+    html += `<div class="section-label"><span>You Owe Them</span></div><div class="card">${owes.map(f=>renderFriendItem(f)).join('')}</div>`;
+  }
+  if (settled.length) {
+    html += `<div class="section-label"><span>Settled</span></div><div class="card">${settled.map(f=>renderFriendItem(f)).join('')}</div>`;
+  }
+  body.innerHTML = html;
+}
+
+let editingFriendId = null;
+
+function openAddFriend(id=null) {
+  editingFriendId = id;
+  document.getElementById('addFriendTitle').textContent = id ? 'Edit Friend' : 'Add Friend';
+  if (id) {
+    const f = DB.friends.find(x=>x.id===id);
+    document.getElementById('fName').value = f.name;
+    document.getElementById('fNote').value = f.note||'';
+  } else {
+    document.getElementById('fName').value = '';
+    document.getElementById('fNote').value = '';
+  }
+  openModal('addFriendModal');
+  setTimeout(()=>document.getElementById('fName').focus(),300);
+}
+
+function saveFriend() {
+  const name = document.getElementById('fName').value.trim();
+  if (!name) { toast('Enter a name'); return; }
+  const note = document.getElementById('fNote').value.trim();
+  const friends = DB.friends;
+  if (editingFriendId) {
+    const f = friends.find(x=>x.id===editingFriendId);
+    if (f) { f.name = name; f.note = note; }
+  } else {
+    friends.push({ id: uid(), name, note, transactions: [] });
+  }
+  DB.friends = friends;
+  closeModal('addFriendModal');
+  renderPage(currentPage);
+  if (editingFriendId) renderFriendDetail(editingFriendId);
+  toast(editingFriendId ? 'Friend updated' : 'Friend added');
+}
+
+function deleteFriend(id) {
+  showConfirm('🗑️','Delete Friend','This will remove the friend and ALL their transactions. This cannot be undone.', () => {
+    DB.friends = DB.friends.filter(f=>f.id!==id);
+    backToFriends();
+    toast('Friend deleted');
+  });
+}
+
+/* ─── FRIEND DETAIL ───── */
+let currentFriendId = null;
+
+function openFriendDetail(id) {
+  currentFriendId = id;
+  const f = DB.friends.find(x=>x.id===id);
+  document.getElementById('detailFriendName').textContent = f.name;
+  renderFriendDetail(id);
+  showScreen('friendDetailScreen');
+}
+
+function renderFriendDetail(id) {
+  const f = DB.friends.find(x=>x.id===id);
+  if (!f) return;
+  const txs = (f.transactions||[]);
+  const totalLent     = txs.filter(t=>t.type==='lent').reduce((s,t)=>s+t.amount,0);
+  const totalReceived = txs.filter(t=>t.type==='received').reduce((s,t)=>s+t.amount,0);
+  const bal           = totalLent - totalReceived;
+  const ag = avatarGradient(f.name);
+  const initials = f.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  const sorted = txs.slice().sort((a,b)=>b.date.localeCompare(a.date));
+
+  const balTagClass = bal > 0 ? 'tag-green' : bal < 0 ? 'tag-red' : 'tag-blue';
+  const balLabel = bal === 0 ? 'All Settled ✓' : (bal > 0 ? `Owes you ${fmtAmt(bal)}` : `You owe ${fmtAmt(Math.abs(bal))}`);
+
+  const body = document.getElementById('friendDetailBody');
+  body.innerHTML = `
+    <!-- Hero Header with gradient glow -->
+    <div class="fd-hero" style="--ag-glow:${ag.glow}">
+      <div class="fd-avatar-wrap">
+        <div class="fd-avatar" style="background:${ag.grad};color:${ag.text};box-shadow:0 0 40px ${ag.glow},0 8px 24px ${ag.glow}">${initials}</div>
+        <div class="fd-glow-ring" style="background:${ag.grad}"></div>
+      </div>
+      <div class="fd-name">${esc(f.name)}</div>
+      ${f.note?`<div style="font-size:12px;color:var(--muted);margin-top:2px">${esc(f.note)}</div>`:''}
+      <div class="tag ${balTagClass}" style="margin-top:10px;padding:6px 18px;font-size:13px">${balLabel}</div>
+    </div>
+
+    <!-- Transaction Summary Cards -->
+    <div class="fd-summary">
+      <div class="fd-stat fd-stat-lent">
+        <div class="fd-stat-icon">💸</div>
+        <div class="fd-stat-label">Total Lent</div>
+        <div class="fd-stat-val" style="color:var(--red)">${fmtAmt(totalLent)}</div>
+      </div>
+      <div class="fd-stat fd-stat-recv">
+        <div class="fd-stat-icon">✅</div>
+        <div class="fd-stat-label">Received Back</div>
+        <div class="fd-stat-val" style="color:var(--green)">${fmtAmt(totalReceived)}</div>
+      </div>
+      <div class="fd-stat fd-stat-bal" style="border-color:${bal>0?'rgba(92,224,160,0.2)':bal<0?'rgba(224,92,92,0.2)':'rgba(255,255,255,0.07)'}">
+        <div class="fd-stat-icon">${bal>0?'📈':bal<0?'📉':'⚖️'}</div>
+        <div class="fd-stat-label">Net Balance</div>
+        <div class="fd-stat-val" style="color:${bal>0?'var(--green)':bal<0?'var(--red)':'var(--muted)'}">${bal===0?'₹0':(bal>0?'+':'-')+fmtAmt(Math.abs(bal))}</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-bottom:10px">
+      <button class="btn btn-gold" onclick="openAddTx('${id}')">+ Add Transaction</button>
+    </div>
+    ${bal!==0?`<button class="btn btn-ghost" style="margin-bottom:16px" onclick="markSettled('${id}')">✅ Mark as Settled</button>`:''}
+
+    <div class="section-label"><span>Transactions (${sorted.length})</span></div>
+    <div class="card">
+      ${sorted.length===0 ? '<div class="empty-state"><div class="empty-icon">📋</div><strong>No transactions</strong>Add the first one above.</div>' :
+        sorted.map(t => renderTxItem(t, id)).join('')
+      }
+    </div>
+
+    <div style="margin-top:16px">
+      <button class="btn btn-red" onclick="deleteFriend('${id}')">🗑️ Delete Friend</button>
+    </div>
+  `;
+}
+
+function renderTxItem(t, fid) {
+  const isLent = t.type === 'lent';
+  return `<div class="tx-item">
+    <div class="tx-icon">${isLent?'💸':'✅'}</div>
+    <div class="tx-info">
+      <div class="tx-note">${esc(t.note||'No note')}</div>
+      <div class="tx-date">${fmtDate(t.date)} · <span class="tag ${isLent?'tag-red':'tag-green'}" style="padding:1px 6px;font-size:10px">${isLent?'Lent':'Received'}</span></div>
+    </div>
+    <div class="tx-amount" style="color:${isLent?'var(--red)':'var(--green)'}">${isLent?'-':'+'}${fmtAmt(t.amount)}</div>
+    <div class="tx-del" onclick="deleteTx('${fid}','${t.id}')">✕</div>
+  </div>`;
+}
+
+function backToFriends() {
+  currentFriendId = null;
+  showScreen('mainScreen');
+  switchPage('friends');
+}
+
+function editCurrentFriend() { openAddFriend(currentFriendId); }
+
+/* ─── TRANSACTIONS ───── */
+let addTxFriendId = null;
+let txType = 'lent';
+
+function openAddTx(fid) {
+  addTxFriendId = fid;
+  txType = 'lent';
+  setTxType('lent');
+  document.getElementById('txAmount').value = '';
+  document.getElementById('txNote').value = '';
+  document.getElementById('txDate').value = today();
+  openModal('addTxModal');
+  setTimeout(()=>document.getElementById('txAmount').focus(),300);
+}
+
+function setTxType(t) {
+  txType = t;
+  document.getElementById('tx-seg-lent').classList.toggle('active', t==='lent');
+  document.getElementById('tx-seg-received').classList.toggle('active', t==='received');
+}
+
+function saveTransaction() {
+  const amount = parseFloat(document.getElementById('txAmount').value);
+  if (!amount || amount <= 0) { toast('Enter a valid amount'); return; }
+  const note = document.getElementById('txNote').value.trim();
+  const date = document.getElementById('txDate').value || today();
+  const friends = DB.friends;
+  const f = friends.find(x=>x.id===addTxFriendId);
+  if (!f) return;
+  f.transactions = f.transactions||[];
+  f.transactions.push({ id:uid(), type:txType, amount, note, date });
+  DB.friends = friends;
+  closeModal('addTxModal');
+  renderFriendDetail(addTxFriendId);
+  renderDash();
+  toast(txType==='lent'?'Transaction recorded':'Payment recorded');
+}
+
+function deleteTx(fid, tid) {
+  showConfirm('🗑️','Delete Transaction','Remove this transaction?', ()=>{
+    const friends = DB.friends;
+    const f = friends.find(x=>x.id===fid);
+    if (f) f.transactions = (f.transactions||[]).filter(t=>t.id!==tid);
+    DB.friends = friends;
+    renderFriendDetail(fid);
+    renderDash();
+    toast('Transaction deleted');
+  });
+}
+
+function markSettled(fid) {
+  showConfirm('✅','Mark as Settled','This will add a settlement transaction to clear the balance.', ()=>{
+    const friends = DB.friends;
+    const f = friends.find(x=>x.id===fid);
+    if (!f) return;
+    const bal = friendBalance(f);
+    if (bal === 0) { toast('Already settled'); return; }
+    f.transactions.push({
+      id: uid(),
+      type: bal > 0 ? 'received' : 'lent',
+      amount: Math.abs(bal),
+      note: 'Settled up',
+      date: today()
+    });
+    DB.friends = friends;
+    renderFriendDetail(fid);
+    renderDash();
+    toast('Marked as settled ✅');
+  });
+}
+
+/* ════════════════════════════════════════════════
+   EXPENSES
+════════════════════════════════════════════════ */
+let expViewMonth = new Date();
+let activeExpCat = 'All';
+
+function renderExpenses() {
+  const expenses = DB.expenses;
+  const ym = expViewMonth.getFullYear()+'-'+String(expViewMonth.getMonth()+1).padStart(2,'0');
+  const monthName = expViewMonth.toLocaleDateString('en-IN',{month:'long',year:'numeric'});
+
+  const monthExp = expenses.filter(e => e.date.startsWith(ym));
+  const cats = ['All', ...new Set(monthExp.map(e=>e.category))];
+  const filtered = activeExpCat==='All' ? monthExp : monthExp.filter(e=>e.category===activeExpCat);
+  const totalFiltered = filtered.reduce((s,e)=>s+e.amount,0);
+  const totalMonth = monthExp.reduce((s,e)=>s+e.amount,0);
+
+  const sorted = filtered.slice().sort((a,b)=>b.date.localeCompare(a.date));
+
+  const body = document.getElementById('expensesBody');
+  body.innerHTML = `
+    <div class="month-nav">
+      <div class="mn-btn" onclick="changeExpMonth(-1)">‹</div>
+      <div class="mn-label">${monthName}</div>
+      <div class="mn-btn" onclick="changeExpMonth(1)">›</div>
+    </div>
+
+    <div class="exp-summary">
+      <div class="exp-summary-card">
+        <div class="lbl">Total This Month</div>
+        <div class="val" style="color:var(--red)">${fmtAmt(totalMonth)}</div>
+      </div>
+      <div class="exp-summary-card">
+        <div class="lbl">${activeExpCat==='All'?'Transactions':'Filtered Total'}</div>
+        <div class="val" style="color:var(--gold)">${activeExpCat==='All'?monthExp.length+' items':fmtAmt(totalFiltered)}</div>
+      </div>
+    </div>
+
+    <div class="cat-chips" id="catChips">
+      ${cats.map(c=>`<div class="cat-chip${c===activeExpCat?' active':''}" onclick="setExpCat('${c.replace(/'/g,"\\'")}')"> ${c}</div>`).join('')}
+    </div>
+
+    <div class="card">
+      ${sorted.length===0 ? `<div class="empty-state"><div class="empty-icon">💸</div><strong>No expenses</strong>${monthExp.length===0?'Nothing recorded this month.':'No expenses in this category.'}</div>` :
+        sorted.map(renderExpItem).join('')
+      }
+    </div>
+  `;
+}
+
+function renderExpItem(e) {
+  const icon = e.category ? e.category.split(' ')[0] : '💰';
+  const catName = e.category ? e.category.split(' ').slice(1).join(' ') : 'Other';
+  return `<div class="exp-item">
+    <div class="exp-cat-icon" style="background:rgba(255,255,255,0.05)">${icon}</div>
+    <div class="exp-info">
+      <div class="exp-name">${esc(e.note||catName)}</div>
+      <div class="exp-date">${fmtDate(e.date)} · ${catName}</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="exp-amount">-${fmtAmt(e.amount)}</div>
+      <div class="tx-del" onclick="deleteExpense('${e.id}')">✕</div>
+    </div>
+  </div>`;
+}
+
+function changeExpMonth(d) {
+  expViewMonth = new Date(expViewMonth.getFullYear(), expViewMonth.getMonth()+d, 1);
+  activeExpCat = 'All';
+  renderExpenses();
+}
+
+function setExpCat(cat) {
+  activeExpCat = cat;
+  renderExpenses();
+}
+
+function openAddExpense() {
+  document.getElementById('expAmount').value = '';
+  document.getElementById('expNote').value = '';
+  document.getElementById('expDate').value = today();
+  openModal('addExpModal');
+  setTimeout(()=>document.getElementById('expAmount').focus(),300);
+}
+
+function saveExpense() {
+  const amount = parseFloat(document.getElementById('expAmount').value);
+  if (!amount || amount <= 0) { toast('Enter a valid amount'); return; }
+  const note = document.getElementById('expNote').value.trim();
+  const cat = document.getElementById('expCat').value;
+  const date = document.getElementById('expDate').value || today();
+  const expenses = DB.expenses;
+  expenses.push({ id:uid(), amount, note, category:cat, date });
+  DB.expenses = expenses;
+  closeModal('addExpModal');
+  renderExpenses();
+  renderDash();
+  toast('Expense added');
+}
+
+function deleteExpense(id) {
+  showConfirm('🗑️','Delete Expense','Remove this expense?', ()=>{
+    DB.expenses = DB.expenses.filter(e=>e.id!==id);
+    renderExpenses();
+    renderDash();
+    toast('Expense deleted');
+  });
+}
+
+/* ════════════════════════════════════════════════
+   SETTINGS
+════════════════════════════════════════════════ */
+function renderSettings() {
+  const friends = DB.friends;
+  const expenses = DB.expenses;
+  const totalLent = friends.reduce((s,f)=>s+Math.max(0,friendBalance(f)),0);
+  const installed = isInstalledPWA() || appInstalled;
+  const canInstall = !installed && !!deferredPrompt;
+  const showInstallRow = !installed; // show if not yet installed (even without prompt, for manual instructions)
+
+  document.getElementById('settingsBody').innerHTML = `
+    <div style="text-align:center;padding:24px 0 16px">
+      <div style="width:72px;height:72px;border-radius:20px;overflow:hidden;margin:0 auto 10px;box-shadow:0 4px 20px rgba(0,198,255,0.3)">
+        <img src="icon-192.png" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.innerHTML='<div style=font-size:40px;line-height:72px>💰</div>'" />
+      </div>
+      <div style="font-size:22px;font-weight:800">My Ledger</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:4px">Personal Finance Tracker</div>
+      ${installed ? `<div style="margin-top:8px;display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:rgba(92,224,160,0.1);border:1px solid rgba(92,224,160,0.2);border-radius:20px;font-size:12px;color:var(--green);font-weight:600">✓ Installed on device</div>` : ''}
+    </div>
+
+    ${showInstallRow ? `
+    <div class="settings-section">
+      <div class="sec-title">App</div>
+      <div class="setting-row setting-row-install" onclick="triggerInstall()">
+        <div class="sr-icon">📲</div>
+        <div class="sr-text">
+          <div class="sr-title">Install App</div>
+          <div class="sr-sub">${canInstall ? 'Add to your home screen for offline use' : 'Add to home screen manually'}</div>
+        </div>
+        <div class="sr-arr" style="color:#00c6ff">${canInstall ? '⬇' : '›'}</div>
+      </div>
+    </div>` : ''}
+
+    <div class="settings-section">
+      <div class="sec-title">Summary</div>
+      <div class="card" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px">
+        <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Friends</div><div style="font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:var(--blue)">${friends.length}</div></div>
+        <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Expenses</div><div style="font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:var(--red)">${expenses.length}</div></div>
+        <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Total Lent</div><div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:var(--green)">${fmtAmt(totalLent)}</div></div>
+        <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Total Spent</div><div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:var(--red)">${fmtAmt(expenses.reduce((s,e)=>s+e.amount,0))}</div></div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="sec-title">Security</div>
+      <div class="setting-row" onclick="openModal('changePinModal')">
+        <div class="sr-icon">🔐</div>
+        <div class="sr-text"><div class="sr-title">Change PIN</div><div class="sr-sub">Update your 4-digit PIN</div></div>
+        <div class="sr-arr">›</div>
+      </div>
+      <div class="setting-row" onclick="showLogoutConfirm()">
+        <div class="sr-icon">🔒</div>
+        <div class="sr-text"><div class="sr-title">Lock App</div><div class="sr-sub">Return to PIN screen</div></div>
+        <div class="sr-arr">›</div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="sec-title">Data</div>
+      <div class="setting-row" onclick="exportData()">
+        <div class="sr-icon">📤</div>
+        <div class="sr-text"><div class="sr-title">Export Data</div><div class="sr-sub">Download all data as JSON</div></div>
+        <div class="sr-arr">›</div>
+      </div>
+      <div class="setting-row" onclick="importDataPrompt()">
+        <div class="sr-icon">📥</div>
+        <div class="sr-text"><div class="sr-title">Import Data</div><div class="sr-sub">Restore from JSON backup</div></div>
+        <div class="sr-arr">›</div>
+      </div>
+      <div class="setting-row" onclick="clearAllData()">
+        <div class="sr-icon">🗑️</div>
+        <div class="sr-text"><div class="sr-title">Clear All Data</div><div class="sr-sub">Erase everything permanently</div></div>
+        <div class="sr-arr" style="color:var(--red)">›</div>
+      </div>
+    </div>
+
+    <div style="text-align:center;padding:16px;font-size:12px;color:var(--muted)">
+      All data stored locally on your device · 100% offline
+    </div>
+  `;
+}
+
+/* ─── CHANGE PIN ───── */
+function changePin() {
+  const old = document.getElementById('cpOld').value;
+  const newP = document.getElementById('cpNew').value;
+  const conf = document.getElementById('cpConf').value;
+  const err = document.getElementById('pinChangeErr');
+
+  if (old !== DB.pin) { err.textContent = 'Current PIN is incorrect'; return; }
+  if (newP.length !== 4 || !/^\d{4}$/.test(newP)) { err.textContent = 'PIN must be exactly 4 digits'; return; }
+  if (newP !== conf) { err.textContent = 'New PINs do not match'; return; }
+  DB.pin = newP;
+  closeModal('changePinModal');
+  document.getElementById('cpOld').value='';
+  document.getElementById('cpNew').value='';
+  document.getElementById('cpConf').value='';
+  err.textContent='';
+  toast('PIN changed successfully');
+}
+
+/* ─── EXPORT / IMPORT ───── */
+function exportData() {
+  const data = {
+    exported: new Date().toISOString(),
+    friends: DB.friends,
+    expenses: DB.expenses
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'ledger-backup-'+today()+'.json';
+  a.click();
+  toast('Data exported');
+}
+
+function importDataPrompt() {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = '.json';
+  input.onchange = e => {
+    const file = e.target.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (!data.friends || !data.expenses) throw new Error('Invalid format');
+        showConfirm('📥','Import Data','This will REPLACE all current data with the imported backup. Continue?', ()=>{
+          DB.friends = data.friends;
+          DB.expenses = data.expenses;
+          renderPage(currentPage);
+          toast('Data imported successfully');
+        });
+      } catch(err) { toast('Invalid backup file'); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+function clearAllData() {
+  showConfirm('⚠️','Clear All Data','This will permanently erase ALL friends, transactions, and expenses. This CANNOT be undone!', ()=>{
+    DB.friends = [];
+    DB.expenses = [];
+    renderPage(currentPage);
+    toast('All data cleared');
+  });
+}
+
+/* ════════════════════════════════════════════════
+   MODAL HELPERS
+════════════════════════════════════════════════ */
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) overlay.classList.remove('open');
+  });
+});
+
+/* ════════════════════════════════════════════════
+   CONFIRM DIALOG
+════════════════════════════════════════════════ */
+let confirmCallback = null;
+
+function showConfirm(icon, title, msg, cb) {
+  document.getElementById('confirmIcon').textContent = icon;
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmMsg').textContent = msg;
+  confirmCallback = cb;
+  document.getElementById('confirmModal').classList.add('open');
+}
+function doConfirm() {
+  closeConfirm();
+  if (confirmCallback) confirmCallback();
+  confirmCallback = null;
+}
+function closeConfirm() {
+  document.getElementById('confirmModal').classList.remove('open');
+}
+
+/* ════════════════════════════════════════════════
+   TOAST
+════════════════════════════════════════════════ */
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+/* ════════════════════════════════════════════════
+   PWA INSTALL
+════════════════════════════════════════════════ */
+let deferredPrompt = null;
+let installDismissed = false;
+let appInstalled = false;
+
+// Capture the install prompt
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  if (!installDismissed && !appInstalled) showInstallBanner();
+  updateInstallSettingRow();
+});
+
+// Detect when successfully installed
+window.addEventListener('appinstalled', () => {
+  appInstalled = true;
+  deferredPrompt = null;
+  hideInstallBanner();
+  updateInstallSettingRow();
+  toast('✅ App installed successfully!');
+});
+
+// Check if already running as installed PWA
+function isInstalledPWA() {
+  return window.matchMedia('(display-mode: standalone)').matches
+    || window.navigator.standalone === true;
+}
+
+function showInstallBanner() {
+  if (isInstalledPWA()) return;
+  setTimeout(() => {
+    document.getElementById('installBanner').classList.add('visible');
+  }, 1200); // slight delay so it doesn't pop instantly
+}
+
+function hideInstallBanner() {
+  document.getElementById('installBanner').classList.remove('visible');
+}
+
+function dismissInstallBanner() {
+  installDismissed = true;
+  hideInstallBanner();
+}
+
+async function triggerInstall() {
+  if (!deferredPrompt) {
+    // Fallback: show manual instructions
+    showInstallInstructions();
+    return;
+  }
+  hideInstallBanner();
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  if (outcome === 'accepted') {
+    appInstalled = true;
+    toast('Installing…');
+  } else {
+    installDismissed = true;
+  }
+  deferredPrompt = null;
+  updateInstallSettingRow();
+}
+
+function showInstallInstructions() {
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isAndroid = /android/i.test(navigator.userAgent);
+  let msg = '';
+  if (isIOS) {
+    msg = 'Tap the Share button (□↑) at the bottom of Safari, then tap "Add to Home Screen".';
+  } else if (isAndroid) {
+    msg = 'Tap the ⋮ menu in Chrome and select "Add to Home Screen" or "Install App".';
+  } else {
+    msg = 'In your browser, look for an install icon (⊕) in the address bar, or use the browser menu → "Install App".';
+  }
+  showConfirm('📲', 'Install My Ledger', msg, () => {});
+  // Change confirm button to "Got it"
+  document.getElementById('confirmOk').textContent = 'Got it';
+  document.getElementById('confirmOk').onclick = closeConfirm;
+}
+
+function updateInstallSettingRow() {
+  // Re-render settings if currently visible
+  if (currentPage === 'settings') renderSettings();
+}
+
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ════════════════════════════════════════════════
+   INIT
+════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  initLogin();
+  // If already running as installed PWA, mark as installed
+  if (isInstalledPWA()) {
+    appInstalled = true;
+    hideInstallBanner();
+  }
+});
+
+/* ─── SERVICE WORKER (inline blob) ───── */
+if ('serviceWorker' in navigator) {
+  const swCode = `
+    const CACHE = 'ledger-v2';
+    const ASSETS = ['/', '/index.html', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png'];
+    self.addEventListener('install', e => {
+      e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).catch(()=>{}));
+      self.skipWaiting();
+    });
+    self.addEventListener('activate', e => {
+      e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));
+      self.clients.claim();
+    });
+    self.addEventListener('fetch', e => {
+      e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).catch(() => caches.match('/index.html'))));
+    });
+  `;
+  const swBlob = new Blob([swCode], {type:'application/javascript'});
+  const swURL = URL.createObjectURL(swBlob);
+  navigator.serviceWorker.register(swURL, {scope: '/'}).catch(()=>{});
+}
+</script>
+</body>
+</html>
