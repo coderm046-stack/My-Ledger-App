@@ -15,19 +15,27 @@
 
   <style>
     :root {
-      --bg:       #0d0d14;
-      --bg2:      #13131f;
-      --bg3:      #1a1a2a;
-      --border:   rgba(255,255,255,0.07);
-      --gold:     #e8b84b;
-      --gold2:    #f5d17a;
-      --red:      #e05c5c;
-      --green:    #5ce0a0;
-      --blue:     #5c9fe0;
-      --text:     #f0ede8;
-      --muted:    rgba(240,237,232,0.45);
-      --card-r:   16px;
-      --shadow:   0 8px 32px rgba(0,0,0,0.5);
+      --bg:       #0a0a12;
+      --bg2:      #111120;
+      --bg3:      #191928;
+      --border:   rgba(255,255,255,0.09);
+      --gold:     #ffc84a;
+      --gold2:    #ffe080;
+      --red:      #ff5f6d;
+      --green:    #2edd9e;
+      --blue:     #4da6ff;
+      --purple:   #b07eff;
+      --orange:   #ff8c42;
+      --text:     #f5f2ee;
+      --muted:    rgba(245,242,238,0.55);
+      --card-r:   18px;
+      --shadow:   0 8px 36px rgba(0,0,0,0.55);
+
+      /* Tab accent gradients */
+      --grad-dash:     linear-gradient(135deg, #ffc84a 0%, #ff8c42 100%);
+      --grad-friends:  linear-gradient(135deg, #4da6ff 0%, #b07eff 100%);
+      --grad-expenses: linear-gradient(135deg, #ff5f6d 0%, #ff8c42 100%);
+      --grad-settings: linear-gradient(135deg, #2edd9e 0%, #4da6ff 100%);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -53,12 +61,28 @@
       opacity: 1; pointer-events: all;
       transform: translateY(0);
     }
+    /* Ambient orb */
+    #mainScreen::before {
+      content: '';
+      position: fixed; top: -120px; right: -80px;
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, var(--orb-color, rgba(255,200,74,0.08)) 0%, transparent 70%);
+      border-radius: 50%; pointer-events: none; z-index: 0;
+      transition: background 0.6s ease;
+    }
 
     /* ── LOGIN ─────────────────────────────────── */
     #loginScreen {
       background: var(--bg);
       align-items: center; justify-content: center;
       gap: 0;
+    }
+    #loginScreen::before {
+      content: '';
+      position: fixed; top: -100px; left: 50%; transform: translateX(-50%);
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(255,200,74,0.08) 0%, transparent 65%);
+      border-radius: 50%; pointer-events: none;
     }
     .login-wrap {
       width: 100%; max-width: 360px;
@@ -70,12 +94,12 @@
       display: flex; flex-direction: column; align-items: center; gap: 8px;
     }
     .logo-icon {
-      width: 72px; height: 72px;
-      background: linear-gradient(135deg, var(--gold), #c8932b);
-      border-radius: 20px;
+      width: 76px; height: 76px;
+      background: var(--grad-dash);
+      border-radius: 22px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 34px;
-      box-shadow: 0 0 40px rgba(232,184,75,0.3);
+      font-size: 36px;
+      box-shadow: 0 0 48px rgba(255,200,74,0.4), 0 8px 24px rgba(0,0,0,0.4);
     }
     .login-logo h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
     .login-logo span { font-size: 13px; color: var(--muted); font-weight: 400; letter-spacing: 2px; text-transform: uppercase; }
@@ -129,17 +153,31 @@
       padding: 52px 20px 16px;
       gap: 12px;
       flex-shrink: 0;
+      position: relative;
     }
-    .topbar-title { font-size: 22px; font-weight: 800; flex: 1; }
+    .topbar-title {
+      font-size: 24px; font-weight: 800; flex: 1;
+      background: var(--tab-grad, var(--grad-dash));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
     .topbar-btn {
       width: 40px; height: 40px;
       border-radius: 12px;
       background: var(--bg3); border: 1px solid var(--border);
       display: flex; align-items: center; justify-content: center;
       cursor: pointer; font-size: 18px;
-      transition: background .15s;
+      transition: background .15s, transform .1s;
     }
-    .topbar-btn:active { background: var(--bg); }
+    .topbar-btn:active { background: var(--bg); transform: scale(0.93); }
+    /* Tab gradient strip under topbar */
+    .topbar::after {
+      content: '';
+      position: absolute; bottom: 0; left: 20px; right: 20px; height: 2px;
+      background: var(--tab-grad, var(--grad-dash));
+      border-radius: 2px; opacity: 0.5;
+    }
 
     /* ── BOTTOM NAV ────────────────────────────── */
     .bottom-nav {
@@ -148,20 +186,42 @@
       border-top: 1px solid var(--border);
       padding: 8px 0 max(8px, env(safe-area-inset-bottom));
       flex-shrink: 0;
+      position: relative;
     }
     .nav-item {
       flex: 1; display: flex; flex-direction: column;
       align-items: center; gap: 4px;
       cursor: pointer; padding: 6px 0;
-      font-size: 10px; font-weight: 600; letter-spacing: .5px;
+      font-size: 10px; font-weight: 700; letter-spacing: .5px;
       color: var(--muted);
       transition: color .2s;
       text-transform: uppercase;
-      user-select: none;
+      user-select: none; position: relative;
     }
-    .nav-item .nav-icon { font-size: 22px; transition: transform .2s; }
-    .nav-item.active { color: var(--gold); }
-    .nav-item.active .nav-icon { transform: translateY(-2px); }
+    .nav-item .nav-icon {
+      font-size: 22px; transition: transform .25s cubic-bezier(.34,1.56,.64,1);
+      filter: grayscale(0.4) opacity(0.6);
+      transition: filter .2s, transform .25s cubic-bezier(.34,1.56,.64,1);
+    }
+    .nav-item.active .nav-icon {
+      transform: translateY(-3px) scale(1.18);
+      filter: none;
+    }
+    .nav-item.active { color: transparent; }
+    .nav-item.active span {
+      background: var(--tab-grad, var(--grad-dash));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    /* Active indicator dot */
+    .nav-item.active::after {
+      content: '';
+      position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 24px; height: 3px;
+      background: var(--tab-grad, var(--grad-dash));
+      border-radius: 3px 3px 0 0;
+    }
 
     /* ── SCROLLABLE BODY ───────────────────────── */
     .screen-body {
@@ -178,56 +238,87 @@
       border-radius: var(--card-r);
       padding: 16px;
       box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
     }
 
     /* ── DASHBOARD ─────────────────────────────── */
     .dash-hero {
-      background: linear-gradient(135deg, #1c1c30 0%, #13131f 100%);
-      border: 1px solid rgba(232,184,75,0.2);
+      background: linear-gradient(135deg, #1e1830 0%, #0e1220 100%);
+      border: 1px solid rgba(255,200,74,0.25);
       border-radius: var(--card-r);
-      padding: 24px;
+      padding: 28px 24px 24px;
       margin-bottom: 16px;
       position: relative; overflow: hidden;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,200,74,0.15);
     }
     .dash-hero::before {
       content: '';
-      position: absolute; top: -30px; right: -30px;
-      width: 120px; height: 120px;
-      background: radial-gradient(circle, rgba(232,184,75,0.15) 0%, transparent 70%);
+      position: absolute; top: -40px; right: -40px;
+      width: 160px; height: 160px;
+      background: radial-gradient(circle, rgba(255,200,74,0.22) 0%, transparent 70%);
       border-radius: 50%;
     }
-    .dash-hero .label { font-size: 11px; font-weight: 600; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; }
+    .dash-hero::after {
+      content: '';
+      position: absolute; bottom: -20px; left: -20px;
+      width: 100px; height: 100px;
+      background: radial-gradient(circle, rgba(77,166,255,0.12) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+    .dash-hero .label { font-size: 11px; font-weight: 700; letter-spacing: 2px; color: rgba(255,200,74,0.75); text-transform: uppercase; margin-bottom: 8px; }
     .dash-hero .amount {
       font-family: 'SF Mono', ui-monospace, 'Consolas', 'Courier New', monospace;
-      font-size: 46px; font-weight: 700;
-      color: var(--gold);
+      font-size: 48px; font-weight: 800;
+      background: linear-gradient(135deg, #ffc84a, #ffe080, #ff8c42);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
       line-height: 1;
+      position: relative; z-index: 1;
     }
-    .dash-hero .sub { font-size: 13px; color: var(--muted); margin-top: 6px; }
+    .dash-hero .sub { font-size: 13px; color: rgba(245,242,238,0.65); margin-top: 8px; font-weight: 500; position: relative; z-index: 1; }
     .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
     .dash-mini {
       background: var(--bg2); border: 1px solid var(--border);
-      border-radius: 12px; padding: 16px;
+      border-radius: 16px; padding: 18px 16px;
+      position: relative; overflow: hidden;
     }
-    .dash-mini .label { font-size: 10px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; }
+    .dash-mini::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: var(--mini-grad, var(--grad-dash));
+      border-radius: 16px 16px 0 0;
+    }
+    .dash-mini .label { font-size: 10px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 8px; font-weight: 700; }
     .dash-mini .val {
       font-family: 'SF Mono', ui-monospace, 'Consolas', 'Courier New', monospace;
-      font-size: 26px; font-weight: 700;
+      font-size: 26px; font-weight: 800; line-height: 1;
     }
-    .dash-mini .val.red { color: var(--red); }
-    .dash-mini .val.green { color: var(--green); }
-    .dash-mini .val.blue { color: var(--blue); }
+    .dash-mini .val.red {
+      background: var(--grad-expenses); -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .dash-mini .val.green {
+      background: var(--grad-settings); -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .dash-mini .val.blue {
+      background: var(--grad-friends); -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent; background-clip: text;
+    }
 
     .section-label {
-      font-size: 11px; font-weight: 600; letter-spacing: 2px;
+      font-size: 11px; font-weight: 800; letter-spacing: 2px;
       color: var(--muted); text-transform: uppercase;
-      margin: 20px 0 10px;
+      margin: 22px 0 10px;
       display: flex; align-items: center; justify-content: space-between;
     }
     .section-label a {
-      font-size: 11px; color: var(--gold); cursor: pointer;
-      text-decoration: none; letter-spacing: 0;
-      font-weight: 600;
+      font-size: 11px; cursor: pointer;
+      text-decoration: none; letter-spacing: 0; font-weight: 700;
+      background: var(--tab-grad, var(--grad-dash));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
 
     /* ── FRIEND ITEMS ──────────────────────────── */
@@ -254,9 +345,15 @@
       font-size: 15px; font-weight: 700;
       flex-shrink: 0;
     }
-    .friend-bal.owed { color: var(--green); }
+    .friend-bal.owed {
+      background: var(--grad-settings); -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent; background-clip: text;
+    }
     .friend-bal.cleared { color: var(--muted); }
-    .friend-bal.owes { color: var(--red); }
+    .friend-bal.owes {
+      background: var(--grad-expenses); -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent; background-clip: text;
+    }
 
     /* ── EXPENSE ITEMS ─────────────────────────── */
     .exp-item {
@@ -284,17 +381,17 @@
     .fab {
       position: fixed; bottom: calc(72px + env(safe-area-inset-bottom));
       right: 20px;
-      width: 56px; height: 56px;
-      border-radius: 18px;
-      background: linear-gradient(135deg, var(--gold), #c8932b);
-      border: none; color: #000; font-size: 26px;
+      width: 58px; height: 58px;
+      border-radius: 20px;
+      background: var(--tab-grad, var(--grad-dash));
+      border: none; color: #000; font-size: 28px;
       display: flex; align-items: center; justify-content: center;
       cursor: pointer;
-      box-shadow: 0 4px 24px rgba(232,184,75,0.4);
-      transition: transform .2s, box-shadow .2s;
+      box-shadow: 0 6px 28px rgba(255,200,74,0.45), 0 2px 8px rgba(0,0,0,0.3);
+      transition: transform .2s cubic-bezier(.34,1.56,.64,1), box-shadow .2s;
       z-index: 50;
     }
-    .fab:active { transform: scale(.9); box-shadow: 0 2px 12px rgba(232,184,75,0.3); }
+    .fab:active { transform: scale(.88); box-shadow: 0 2px 12px rgba(255,200,74,0.3); }
     .fab.hidden { display: none; }
 
     /* ── MODALS ────────────────────────────────── */
@@ -354,7 +451,7 @@
       cursor: pointer; transition: opacity .2s, transform .15s;
     }
     .btn:active { transform: scale(.97); opacity: .85; }
-    .btn-gold { background: linear-gradient(135deg, var(--gold), #c8932b); color: #000; }
+    .btn-gold { background: var(--tab-grad, var(--grad-dash)); color: #000; font-weight: 800; box-shadow: 0 4px 18px rgba(255,200,74,0.3); }
     .btn-red { background: rgba(224,92,92,0.15); color: var(--red); border: 1px solid rgba(224,92,92,0.3); }
     .btn-ghost { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
 
@@ -376,7 +473,7 @@
     /* ── FRIEND DETAIL HERO ────────────────────── */
     .fd-hero {
       display: flex; flex-direction: column;
-      align-items: center; padding: 20px 0 22px;
+      align-items: center; padding: 24px 0 24px;
       gap: 4px; position: relative;
     }
     .fd-avatar-wrap {
@@ -393,7 +490,7 @@
       border-radius: 26px; opacity: 0.25;
       filter: blur(12px); z-index: 0;
     }
-    .fd-name { font-size: 24px; font-weight: 800; text-align: center; }
+    .fd-name { font-size: 24px; font-weight: 800; text-align: center; letter-spacing: -0.3px; }
 
     /* ── TRANSACTION SUMMARY ───────────────────── */
     .fd-summary {
@@ -457,13 +554,19 @@
       padding: 0 0 16px;
     }
     .month-nav .mn-btn {
-      width: 36px; height: 36px; border-radius: 10px;
+      width: 38px; height: 38px; border-radius: 12px;
       background: var(--bg3); border: 1px solid var(--border);
       color: var(--text); font-size: 18px;
       display: flex; align-items: center; justify-content: center;
-      cursor: pointer;
+      cursor: pointer; transition: transform .15s;
     }
-    .month-nav .mn-label { font-size: 17px; font-weight: 800; }
+    .month-nav .mn-btn:active { transform: scale(0.9); }
+    .month-nav .mn-label {
+      font-size: 17px; font-weight: 800;
+      background: var(--grad-expenses);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
 
     .cat-chips {
       display: flex; gap: 8px; overflow-x: auto;
@@ -479,8 +582,10 @@
       flex-shrink: 0;
     }
     .cat-chip.active {
-      background: rgba(232,184,75,0.15);
-      border-color: var(--gold); color: var(--gold);
+      background: rgba(255,200,74,0.15);
+      border-color: var(--orange); 
+      background: linear-gradient(135deg, rgba(255,95,109,0.15), rgba(255,140,66,0.12));
+      border-color: var(--red); color: var(--red);
     }
     .exp-summary {
       display: grid; grid-template-columns: 1fr 1fr;
@@ -501,17 +606,17 @@
     .settings-section .sec-title { font-size: 11px; letter-spacing: 2px; font-weight: 600; color: var(--muted); text-transform: uppercase; margin-bottom: 10px; }
     .setting-row {
       display: flex; align-items: center;
-      padding: 14px 16px; gap: 14px;
+      padding: 15px 16px; gap: 14px;
       background: var(--bg2); border: 1px solid var(--border);
-      border-radius: 12px; margin-bottom: 8px;
-      cursor: pointer; transition: background .15s;
+      border-radius: 14px; margin-bottom: 8px;
+      cursor: pointer; transition: background .15s, transform .1s;
     }
-    .setting-row:active { background: var(--bg3); }
-    .setting-row .sr-icon { font-size: 20px; }
+    .setting-row:active { background: var(--bg3); transform: scale(0.98); }
+    .setting-row .sr-icon { font-size: 22px; width: 36px; text-align: center; }
     .setting-row .sr-text { flex: 1; }
     .setting-row .sr-title { font-size: 15px; font-weight: 700; }
-    .setting-row .sr-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
-    .setting-row .sr-arr { color: var(--muted); font-size: 16px; }
+    .setting-row .sr-sub { font-size: 12px; color: var(--muted); margin-top: 2px; font-weight: 500; }
+    .setting-row .sr-arr { color: var(--muted); font-size: 18px; font-weight: 700; }
 
     /* ── EMPTY STATE ───────────────────────────── */
     .empty-state {
@@ -541,9 +646,9 @@
       border-radius: 6px; font-size: 11px; font-weight: 700;
       letter-spacing: .5px;
     }
-    .tag-green { background: rgba(92,224,160,0.12); color: var(--green); }
-    .tag-red { background: rgba(224,92,92,0.12); color: var(--red); }
-    .tag-blue { background: rgba(92,159,224,0.12); color: var(--blue); }
+    .tag-green { background: rgba(46,221,158,0.18); color: #2edd9e; font-weight: 700; }
+    .tag-red { background: rgba(255,95,109,0.18); color: #ff5f6d; font-weight: 700; }
+    .tag-blue { background: rgba(77,166,255,0.18); color: #4da6ff; font-weight: 700; }
 
     /* ── CONFIRM ───────────────────────────────── */
     .confirm-modal {
@@ -629,20 +734,23 @@
 
     /* ── LIGHT MODE ─────────────────────────────── */
     :root.light {
-      --bg:     #f4f3ef;
+      --bg:     #f2f0f8;
       --bg2:    #ffffff;
-      --bg3:    #ebebeb;
-      --border: rgba(0,0,0,0.10);
-      --text:   #1a1a20;
-      --muted:  rgba(20,20,30,0.45);
-      --shadow: 0 8px 32px rgba(0,0,0,0.10);
+      --bg3:    #e8e6f0;
+      --border: rgba(0,0,0,0.09);
+      --text:   #12111e;
+      --muted:  rgba(18,17,30,0.58);
+      --shadow: 0 8px 32px rgba(80,60,180,0.08);
     }
     :root.light .pin-btn { color: var(--text); }
-    :root.light .bottom-nav { background: var(--bg2); }
+    :root.light .bottom-nav { background: rgba(255,255,255,0.95); backdrop-filter: blur(12px); }
     :root.light .modal { background: var(--bg2); }
     :root.light .confirm-box { background: var(--bg2); }
-    :root.light .dash-hero { background: linear-gradient(135deg,#e8e4d4 0%,#f4f3ef 100%); border-color: rgba(232,184,75,0.3); }
+    :root.light .topbar { background: transparent; }
+    :root.light .dash-hero { background: linear-gradient(135deg,#fff8e8 0%,#fff3f8 100%); border-color: rgba(255,200,74,0.35); }
     :root.light #installBanner { background: linear-gradient(135deg,#e8f4fb 0%,#f0f8ff 100%); }
+    :root.light .nav-item { color: rgba(18,17,30,0.45); }
+    :root.light .nav-item.active { color: var(--gold); }
 
   </style>
 </head>
@@ -996,6 +1104,13 @@ function showScreen(id) {
   updateFab();
 }
 
+const PAGE_GRADS = {
+  dash:     'linear-gradient(135deg, #ffc84a 0%, #ff8c42 100%)',
+  friends:  'linear-gradient(135deg, #4da6ff 0%, #b07eff 100%)',
+  expenses: 'linear-gradient(135deg, #ff5f6d 0%, #ff8c42 100%)',
+  settings: 'linear-gradient(135deg, #2edd9e 0%, #4da6ff 100%)',
+};
+
 function switchPage(page) {
   currentPage = page;
   const pages = ['dash','friends','expenses','settings'];
@@ -1003,6 +1118,16 @@ function switchPage(page) {
     document.getElementById('page'+cap(p)).style.display = p===page ? 'flex' : 'none';
     document.getElementById('nav-'+p).classList.toggle('active', p===page);
   });
+  // Set tab gradient CSS variable on :root
+  document.documentElement.style.setProperty('--tab-grad', PAGE_GRADS[page] || PAGE_GRADS.dash);
+  // Set ambient orb color
+  const ORB_COLORS = {
+    dash:     'rgba(255,200,74,0.09)',
+    friends:  'rgba(77,166,255,0.09)',
+    expenses: 'rgba(255,95,109,0.09)',
+    settings: 'rgba(46,221,158,0.08)',
+  };
+  document.documentElement.style.setProperty('--orb-color', ORB_COLORS[page] || ORB_COLORS.dash);
   updateFab();
   renderPage(page);
 }
@@ -1062,19 +1187,19 @@ function renderDash() {
     </div>
 
     <div class="dash-grid">
-      <div class="dash-mini">
+      <div class="dash-mini" style="--mini-grad:var(--grad-expenses)">
         <div class="label">This Month</div>
         <div class="val red">${fmtAmt(monthTotal)}</div>
       </div>
-      <div class="dash-mini">
+      <div class="dash-mini" style="--mini-grad:var(--grad-settings)">
         <div class="label">They Owe You</div>
         <div class="val green">${fmtAmt(totalLent)}</div>
       </div>
-      <div class="dash-mini">
+      <div class="dash-mini" style="--mini-grad:var(--grad-expenses)">
         <div class="label">You Owe Them</div>
         <div class="val red">${fmtAmt(totalOwed)}</div>
       </div>
-      <div class="dash-mini">
+      <div class="dash-mini" style="--mini-grad:var(--grad-friends)">
         <div class="label">Friends</div>
         <div class="val blue">${friends.length}</div>
       </div>
@@ -1264,15 +1389,15 @@ function renderFriendDetail(id) {
 
     <!-- Transaction Summary Cards -->
     <div class="fd-summary">
-      <div class="fd-stat fd-stat-lent">
+      <div class="fd-stat fd-stat-lent" style="border-top:3px solid #ff5f6d;padding-top:11px">
         <div class="fd-stat-icon">💸</div>
         <div class="fd-stat-label">Total Lent</div>
-        <div class="fd-stat-val" style="color:var(--red)">${fmtAmt(totalLent)}</div>
+        <div class="fd-stat-val" style="background:var(--grad-expenses);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${fmtAmt(totalLent)}</div>
       </div>
-      <div class="fd-stat fd-stat-recv">
+      <div class="fd-stat fd-stat-recv" style="border-top:3px solid #2edd9e;padding-top:11px">
         <div class="fd-stat-icon">✅</div>
         <div class="fd-stat-label">Received Back</div>
-        <div class="fd-stat-val" style="color:var(--green)">${fmtAmt(totalReceived)}</div>
+        <div class="fd-stat-val" style="background:var(--grad-settings);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${fmtAmt(totalReceived)}</div>
       </div>
       <div class="fd-stat fd-stat-bal" style="border-color:${bal>0?'rgba(92,224,160,0.2)':bal<0?'rgba(224,92,92,0.2)':'rgba(255,255,255,0.07)'}">
         <div class="fd-stat-icon">${bal>0?'📈':bal<0?'📉':'⚖️'}</div>
@@ -1538,9 +1663,9 @@ function renderSettings() {
       <div class="sec-title">Summary</div>
       <div class="card" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px">
         <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Friends</div><div style="font-family:'SF Mono',ui-monospace,'Consolas','Courier New',monospace;font-size:20px;font-weight:700;color:var(--blue)">${friends.length}</div></div>
-        <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Expenses</div><div style="font-family:'SF Mono',ui-monospace,'Consolas','Courier New',monospace;font-size:20px;font-weight:700;color:var(--red)">${expenses.length}</div></div>
-        <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Total Lent</div><div style="font-family:'SF Mono',ui-monospace,'Consolas','Courier New',monospace;font-size:18px;font-weight:700;color:var(--green)">${fmtAmt(totalLent)}</div></div>
-        <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Total Spent</div><div style="font-family:'SF Mono',ui-monospace,'Consolas','Courier New',monospace;font-size:18px;font-weight:700;color:var(--red)">${fmtAmt(expenses.reduce((s,e)=>s+e.amount,0))}</div></div>
+        <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Expenses</div><div style="font-family:'SF Mono',ui-monospace,'Consolas','Courier New',monospace;font-size:20px;font-weight:700;background:var(--grad-expenses);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${expenses.length}</div></div>
+        <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Total Lent</div><div style="font-family:'SF Mono',ui-monospace,'Consolas','Courier New',monospace;font-size:18px;font-weight:700;background:var(--grad-settings);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${fmtAmt(totalLent)}</div></div>
+        <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Total Spent</div><div style="font-family:'SF Mono',ui-monospace,'Consolas','Courier New',monospace;font-size:18px;font-weight:700;background:var(--grad-expenses);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${fmtAmt(expenses.reduce((s,e)=>s+e.amount,0))}</div></div>
       </div>
     </div>
 
