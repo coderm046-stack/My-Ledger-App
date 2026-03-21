@@ -544,6 +544,8 @@
       font-size: 14px; font-weight: 700;
       flex-shrink: 0;
     }
+    .tx-edit { font-size: 15px; cursor: pointer; padding: 4px; flex-shrink: 0; opacity: 0.6; transition: opacity .15s, transform .15s; }
+    .tx-edit:active { opacity: 1; transform: scale(1.15); }
     .tx-del { font-size: 16px; color: var(--muted); cursor: pointer; padding: 4px; flex-shrink: 0; }
     .tx-del:active { color: var(--red); }
 
@@ -883,7 +885,7 @@
 <div class="modal-overlay" id="addTxModal">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-title">Add Transaction</div>
+    <div class="modal-title" id="txModalTitle">Add Transaction</div>
     <div class="seg-control">
       <button class="seg-btn active" id="tx-seg-lent" onclick="setTxType('lent')">💸 I Lent</button>
       <button class="seg-btn" id="tx-seg-received" onclick="setTxType('received')">✅ Received Back</button>
@@ -893,7 +895,7 @@
     <div class="field"><label>Date</label><input id="txDate" type="date" /></div>
     <div style="display:flex;gap:10px">
       <button class="btn btn-ghost" style="flex:1" onclick="closeModal('addTxModal')">Cancel</button>
-      <button class="btn btn-gold" style="flex:1" onclick="saveTransaction()">Add</button>
+      <button class="btn btn-gold" style="flex:1" id="txSaveBtn" onclick="saveTransaction()">Add</button>
     </div>
   </div>
 </div>
@@ -902,7 +904,7 @@
 <div class="modal-overlay" id="addExpModal">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-title">Add Expense</div>
+    <div class="modal-title" id="expModalTitle">Add Expense</div>
     <div class="field"><label>Amount (₹)</label><input id="expAmount" type="number" inputmode="decimal" placeholder="0.00" min="0" /></div>
     <div class="field"><label>Note</label><input id="expNote" type="text" placeholder="What did you spend on?" autocomplete="off" /></div>
     <div class="field">
@@ -925,7 +927,7 @@
     <div class="field"><label>Date</label><input id="expDate" type="date" /></div>
     <div style="display:flex;gap:10px">
       <button class="btn btn-ghost" style="flex:1" onclick="closeModal('addExpModal')">Cancel</button>
-      <button class="btn btn-gold" style="flex:1" onclick="saveExpense()">Add</button>
+      <button class="btn btn-gold" style="flex:1" id="expSaveBtn" onclick="saveExpense()">Save</button>
     </div>
   </div>
 </div>
@@ -1432,7 +1434,8 @@ function renderTxItem(t, fid) {
       <div class="tx-note">${esc(t.note||'No note')}</div>
       <div class="tx-date">${fmtDate(t.date)} · <span class="tag ${isLent?'tag-red':'tag-green'}" style="padding:1px 6px;font-size:10px">${isLent?'Lent':'Received'}</span></div>
     </div>
-    <div class="tx-amount" style="color:${isLent?'var(--red)':'var(--green)'}">${isLent?'-':'+'}${fmtAmt(t.amount)}</div>
+    <div class="tx-amount" style="${isLent?'background:var(--grad-expenses)':'background:var(--grad-settings)'};-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${isLent?'-':'+'}${fmtAmt(t.amount)}</div>
+    <div class="tx-edit" onclick="openEditTx('${fid}','${t.id}')">✏️</div>
     <div class="tx-del" onclick="deleteTx('${fid}','${t.id}')">✕</div>
   </div>`;
 }
@@ -1448,14 +1451,36 @@ function editCurrentFriend() { openAddFriend(currentFriendId); }
 /* ─── TRANSACTIONS ───── */
 let addTxFriendId = null;
 let txType = 'lent';
+let editingTxId = null;
 
 function openAddTx(fid) {
   addTxFriendId = fid;
+  editingTxId = null;
   txType = 'lent';
   setTxType('lent');
   document.getElementById('txAmount').value = '';
   document.getElementById('txNote').value = '';
   document.getElementById('txDate').value = today();
+  document.getElementById('txModalTitle').textContent = 'Add Transaction';
+  document.getElementById('txSaveBtn').textContent = 'Add';
+  openModal('addTxModal');
+  setTimeout(()=>document.getElementById('txAmount').focus(),300);
+}
+
+function openEditTx(fid, tid) {
+  const f = DB.friends.find(x=>x.id===fid);
+  if (!f) return;
+  const t = (f.transactions||[]).find(x=>x.id===tid);
+  if (!t) return;
+  addTxFriendId = fid;
+  editingTxId = tid;
+  txType = t.type;
+  setTxType(t.type);
+  document.getElementById('txAmount').value = t.amount;
+  document.getElementById('txNote').value = t.note || '';
+  document.getElementById('txDate').value = t.date;
+  document.getElementById('txModalTitle').textContent = 'Edit Transaction';
+  document.getElementById('txSaveBtn').textContent = 'Save';
   openModal('addTxModal');
   setTimeout(()=>document.getElementById('txAmount').focus(),300);
 }
@@ -1475,12 +1500,26 @@ function saveTransaction() {
   const f = friends.find(x=>x.id===addTxFriendId);
   if (!f) return;
   f.transactions = f.transactions||[];
-  f.transactions.push({ id:uid(), type:txType, amount, note, date });
-  DB.friends = friends;
-  closeModal('addTxModal');
-  renderFriendDetail(addTxFriendId);
-  renderDash();
-  toast(txType==='lent'?'Transaction recorded':'Payment recorded');
+
+  if (editingTxId) {
+    // Update existing
+    const tx = f.transactions.find(x=>x.id===editingTxId);
+    if (tx) { tx.type = txType; tx.amount = amount; tx.note = note; tx.date = date; }
+    DB.friends = friends;
+    closeModal('addTxModal');
+    renderFriendDetail(addTxFriendId);
+    renderDash();
+    toast('Transaction updated ✓');
+  } else {
+    // Add new
+    f.transactions.push({ id:uid(), type:txType, amount, note, date });
+    DB.friends = friends;
+    closeModal('addTxModal');
+    renderFriendDetail(addTxFriendId);
+    renderDash();
+    toast(txType==='lent'?'Transaction recorded':'Payment recorded');
+  }
+  editingTxId = null;
 }
 
 function deleteTx(fid, tid) {
@@ -1575,8 +1614,9 @@ function renderExpItem(e) {
       <div class="exp-name">${esc(e.note||catName)}</div>
       <div class="exp-date">${fmtDate(e.date)} · ${catName}</div>
     </div>
-    <div style="display:flex;align-items:center;gap:8px">
+    <div style="display:flex;align-items:center;gap:6px">
       <div class="exp-amount">-${fmtAmt(e.amount)}</div>
+      <div class="tx-edit" onclick="openEditExpense('${e.id}')">✏️</div>
       <div class="tx-del" onclick="deleteExpense('${e.id}')">✕</div>
     </div>
   </div>`;
@@ -1593,10 +1633,33 @@ function setExpCat(cat) {
   renderExpenses();
 }
 
+let editingExpId = null;
+
 function openAddExpense() {
+  editingExpId = null;
   document.getElementById('expAmount').value = '';
   document.getElementById('expNote').value = '';
   document.getElementById('expDate').value = today();
+  document.getElementById('expModalTitle').textContent = 'Add Expense';
+  document.getElementById('expSaveBtn').textContent = 'Add';
+  openModal('addExpModal');
+  setTimeout(()=>document.getElementById('expAmount').focus(),300);
+}
+
+function openEditExpense(id) {
+  const e = DB.expenses.find(x=>x.id===id);
+  if (!e) return;
+  editingExpId = id;
+  document.getElementById('expAmount').value = e.amount;
+  document.getElementById('expNote').value = e.note || '';
+  document.getElementById('expDate').value = e.date;
+  // Set category select
+  const sel = document.getElementById('expCat');
+  for (let i=0; i<sel.options.length; i++) {
+    if (sel.options[i].value === e.category) { sel.selectedIndex = i; break; }
+  }
+  document.getElementById('expModalTitle').textContent = 'Edit Expense';
+  document.getElementById('expSaveBtn').textContent = 'Save';
   openModal('addExpModal');
   setTimeout(()=>document.getElementById('expAmount').focus(),300);
 }
@@ -1607,13 +1670,26 @@ function saveExpense() {
   const note = document.getElementById('expNote').value.trim();
   const cat = document.getElementById('expCat').value;
   const date = document.getElementById('expDate').value || today();
-  const expenses = DB.expenses;
-  expenses.push({ id:uid(), amount, note, category:cat, date });
-  DB.expenses = expenses;
-  closeModal('addExpModal');
-  renderExpenses();
-  renderDash();
-  toast('Expense added');
+
+  if (editingExpId) {
+    const expenses = DB.expenses;
+    const e = expenses.find(x=>x.id===editingExpId);
+    if (e) { e.amount = amount; e.note = note; e.category = cat; e.date = date; }
+    DB.expenses = expenses;
+    editingExpId = null;
+    closeModal('addExpModal');
+    renderExpenses();
+    renderDash();
+    toast('Expense updated ✓');
+  } else {
+    const expenses = DB.expenses;
+    expenses.push({ id:uid(), amount, note, category:cat, date });
+    DB.expenses = expenses;
+    closeModal('addExpModal');
+    renderExpenses();
+    renderDash();
+    toast('Expense added');
+  }
 }
 
 function deleteExpense(id) {
